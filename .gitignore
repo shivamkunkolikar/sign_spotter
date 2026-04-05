@@ -1,0 +1,5 @@
+*.onnx
+__pycache__/
+.venv/
+*.pyc
+/tmp/

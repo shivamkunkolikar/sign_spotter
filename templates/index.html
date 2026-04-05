@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Traffic Sign Detector</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap"
+    rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+  <div class="app">
+
+    <!-- Header -->
+    <header>
+      <div class="logo-mark">TS</div>
+      <div>
+        <h1>Traffic Sign Detector</h1>
+        <p>CNN + YOLOv8 · GTSRB · 43 classes</p>
+      </div>
+      <div class="status-pill" id="globalStatus">● model ready</div>
+    </header>
+
+    <main>
+      <!-- Sidebar nav -->
+      <nav>
+        <div class="nav-label">Detection modes</div>
+        <div class="nav-item active" onclick="switchTab('webcam')">
+          <div class="nav-icon">◉</div>
+          Live camera
+        </div>
+        <div class="nav-item" onclick="switchTab('video')">
+          <div class="nav-icon">▶</div>
+          Video upload
+        </div>
+        <div class="nav-item" onclick="switchTab('photo')">
+          <div class="nav-icon">⬡</div>
+          Photo classify
+        </div>
+        <div class="nav-divider"></div>
+        <div class="nav-label">Model</div>
+        <div class="nav-item" onclick="switchTab('about')">
+          <div class="nav-icon">≡</div>
+          Info
+        </div>
+      </nav>
+
+      <!-- Content -->
+      <div class="content">
+
+        <!-- ══ WEBCAM PANEL ══ -->
+        <div class="panel active" id="panel-webcam">
+          <div class="panel-title">Live Camera Detection</div>
+          <div class="panel-sub">// real-time · yolo localization + cnn classification</div>
+
+          <div class="webcam-grid">
+            <!-- Feed -->
+            <div class="card">
+              <div class="card-head">
+                <div class="dot" id="camDot"></div>
+                <span id="camStatus">camera feed</span>
+              </div>
+              <div class="card-body">
+                <div class="feed-box" id="feedBox">
+                  <img id="webcamFeed" alt="webcam feed">
+                  <div class="feed-placeholder" id="feedPlaceholder">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path
+                        d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                    </svg>
+                    <p>camera not started</p>
+                  </div>
+                </div>
+                <div class="btn-row">
+                  <button class="btn btn-primary" id="btnStart" onclick="startWebcam()">Start camera</button>
+                  <button class="btn btn-danger" id="btnStop" onclick="stopWebcam()" disabled>Stop</button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Detection log -->
+            <div class="card">
+              <div class="card-head">
+                <div class="dot green"></div>
+                <span>detection log</span>
+              </div>
+              <div class="card-body">
+                <div class="det-log" id="detLog">
+                  <div class="no-det">no detections yet</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ VIDEO PANEL ══ -->
+        <div class="panel" id="panel-video">
+          <div class="panel-title">Video Upload</div>
+          <div class="panel-sub">// streams frame-by-frame · same pipeline as live camera</div>
+
+          <!-- Upload zone (shown before video is loaded) -->
+          <div id="videoUploadSection">
+            <div class="card">
+              <div class="card-head">
+                <div class="dot amber"></div>upload video
+              </div>
+              <div class="card-body">
+                <div class="dropzone" id="videoDrop" ondragover="event.preventDefault();this.classList.add('drag')"
+                  ondragleave="this.classList.remove('drag')" ondrop="handleVideoDrop(event)">
+                  <input type="file" accept="video/*" onchange="handleVideoFile(this.files[0])">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <path
+                      d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                  </svg>
+                  <h3>Drop video here</h3>
+                  <p>mp4 · avi · mov · mkv</p>
+                </div>
+                <div id="uploadingIndicator"
+                  style="display:none;margin-top:12px;display:none;align-items:center;gap:10px;">
+                  <div class="spinner"></div>
+                  <span style="font-size:12px;font-family:var(--mono);color:var(--muted)">uploading...</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Player (shown after upload) -->
+          <div id="videoPlayerSection" style="display:none">
+            <div class="webcam-grid">
+              <!-- Feed -->
+              <div class="card">
+                <div class="card-head">
+                  <div class="dot" id="vidDot"></div>
+                  <span id="vidStatus">video ready</span>
+                  <span style="margin-left:auto;font-size:11px;font-family:var(--mono);color:var(--muted)"
+                    id="vidProgress">0%</span>
+                </div>
+                <div class="card-body">
+                  <div class="feed-box">
+                    <img id="videoFeed" style="display:none;width:100%;height:100%;object-fit:cover;" alt="video feed">
+                    <div class="feed-placeholder" id="videoPlaceholder">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+                        style="width:48px;height:48px;opacity:0.2;display:block;margin:0 auto 12px">
+                        <path
+                          d="M15 10l4.553-2.069A1 1 0 0121 8.87v6.26a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
+                      </svg>
+                      <p style="font-size:12px;color:var(--muted);font-family:var(--mono)">press play to start</p>
+                    </div>
+                  </div>
+                  <div class="btn-row">
+                    <button class="btn btn-primary" id="vidBtnPlay" onclick="videoPlay()">Play</button>
+                    <button class="btn btn-ghost" id="vidBtnPause" onclick="videoPause()" disabled>Pause</button>
+                    <button class="btn btn-danger" id="vidBtnStop" onclick="videoStop()" disabled>Stop</button>
+                    <button class="btn btn-ghost" onclick="videoReload()">Upload new</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Detection log (same as webcam) -->
+              <div class="card">
+                <div class="card-head">
+                  <div class="dot green"></div>
+                  <span>detection log</span>
+                </div>
+                <div class="card-body">
+                  <div class="det-log" id="videoDetLog">
+                    <div class="no-det">press play to start detection</div>
+                  </div>
+                  <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:12px;">
+                    <div
+                      style="font-size:10px;font-family:var(--mono);color:var(--muted);letter-spacing:0.08em;margin-bottom:8px;">
+                      ALL SIGNS SEEN</div>
+                    <div class="signs-found" id="videoSignsSeen">
+                      <span style="font-size:11px;color:var(--muted);font-family:var(--mono)">none yet</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ PHOTO PANEL ══ -->
+        <div class="panel" id="panel-photo">
+          <div class="panel-title">Photo Classification</div>
+          <div class="panel-sub">// single image · direct cnn classify · top-5 predictions</div>
+
+          <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+            <div class="card">
+              <div class="card-head">
+                <div class="dot amber"></div>upload image
+              </div>
+              <div class="card-body">
+                <div class="dropzone" id="photoDrop" ondragover="event.preventDefault();this.classList.add('drag')"
+                  ondragleave="this.classList.remove('drag')" ondrop="handlePhotoDrop(event)">
+                  <input type="file" accept="image/*" onchange="handlePhotoFile(this.files[0])">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                    <rect x="3" y="3" width="18" height="18" rx="2" />
+                    <circle cx="8.5" cy="8.5" r="1.5" />
+                    <path d="M21 15l-5-5L5 21" />
+                  </svg>
+                  <h3>Drop image here</h3>
+                  <p>jpg · png · bmp · webp</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="card" id="photoResultCard" style="display:none">
+              <div class="card-head">
+                <div class="dot green"></div>classification result
+              </div>
+              <div class="card-body">
+                <div class="photo-result">
+                  <img class="photo-thumb" id="photoThumb">
+                  <div>
+                    <div style="font-size:11px;font-family:var(--mono);color:var(--muted);margin-bottom:10px;">TOP 5
+                      PREDICTIONS</div>
+                    <div class="pred-list" id="predList"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ══ ABOUT PANEL ══ -->
+        <div class="panel" id="panel-about">
+          <div class="panel-title">Model Info</div>
+          <div class="panel-sub">// architecture · training · dataset</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div class="card">
+              <div class="card-head">
+                <div class="dot"></div>cnn architecture
+              </div>
+              <div class="card-body" style="font-family:var(--mono);font-size:12px;line-height:1.8;color:var(--muted);">
+                <span style="color:var(--accent)">Input</span> 3 × 32 × 32<br>
+                Conv2d 3→16, k=5 + ReLU<br>
+                Conv2d 16→32, k=5 + ReLU<br>
+                MaxPool2d /2<br>
+                Conv2d 32→64, k=5 + ReLU<br>
+                MaxPool2d /2 → <span style="color:var(--amber)">64×4×4</span><br>
+                Linear 1024→512 + ReLU<br>
+                Dropout 0.5<br>
+                <span style="color:var(--accent)">Linear 512→43 classes</span>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-head">
+                <div class="dot"></div>dataset · pipeline
+              </div>
+              <div class="card-body" style="font-family:var(--mono);font-size:12px;line-height:2;color:var(--muted);">
+                Dataset: <span style="color:var(--text)">GTSRB</span><br>
+                Classes: <span style="color:var(--accent)">43</span><br>
+                Input size: <span style="color:var(--text)">32 × 32</span><br>
+                Detector: <span style="color:var(--text)">YOLOv8n (localize)</span><br>
+                Classifier: <span style="color:var(--text)">CNN (identify)</span><br>
+                Threshold: <span style="color:var(--amber)">85% confidence</span><br>
+                Norm mean: <span style="color:var(--text)">0.340 / 0.312 / 0.321</span><br>
+                Norm std: <span style="color:var(--text)">0.272 / 0.261 / 0.267</span>
+              </div>
+            </div>
+            <div class="card" style="grid-column:1/-1">
+              <div class="card-head">
+                <div class="dot"></div>43 class index
+              </div>
+              <div class="card-body">
+                <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                  {% for name in class_names %}
+                  <span
+                    style="padding:3px 8px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;font-size:11px;font-family:var(--mono);color:var(--muted);">
+                    <span style="color:var(--accent);">{{ loop.index0 }}</span> {{ name }}
+                  </span>
+                  {% endfor %}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- /content -->
+    </main>
+  </div>
+
+  <script src="/static/script.js"></script>
+</body>
+
+</html>
