@@ -1,6 +1,6 @@
 # sign-spotter 🚦
 
-A fun little web app that detects and classifies German traffic signs in real time using YOLOv8 + a custom CNN — built as a personal experiment, not a serious production thing.
+A fun little web app that detects and classifies German traffic signs in real time using YOLOv8 + a custom CNN — built as a personal experiment, not a serious production thing, may not always give accurate results.
 
 ## what it does
 
@@ -66,9 +66,8 @@ sign-spotter/
 
 ## notes
 
-- Works best with a GPU — CPU inference is slow (~3–5 FPS)
 - Model was trained on cropped sign images so real-world detection on dashcam footage may vary
-- This is just a fun experiment, not production-ready
+- This is just a fun experiment, model may give wrong results
 
 ## classes
 
