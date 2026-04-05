@@ -27,7 +27,7 @@ Trained on the [German Traffic Sign Recognition Benchmark (GTSRB)](https://bench
 ## setup
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/sign-spotter
+git clone https://github.com/shivamkunkolikar/sign-spotter
 cd sign-spotter
 python -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
